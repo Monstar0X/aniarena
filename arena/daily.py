@@ -1,6 +1,7 @@
 """Daily puzzle ("guess the anime" with Wordle-style attribute feedback)."""
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from datetime import date
 
@@ -76,6 +77,12 @@ class Daily:
 
     def today(self) -> date:
         return progress.today(self.tz)
+
+    def until_next(self, now: float | None = None) -> str:
+        local = (now if now is not None else time.time()) + self.tz * 3600
+        mins = int(86400 - (local % 86400)) // 60
+        h, m = divmod(mins, 60)
+        return f"{h}h {m:02d}m"
 
     def hint(self, tries: int, target: dict) -> str | None:
         """Free help that unlocks late in the game so it stays winnable for newcomers."""

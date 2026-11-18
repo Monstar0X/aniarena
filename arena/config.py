@@ -27,6 +27,7 @@ class Settings:
     refresh_days: int
     anilist_url: str
     log_channel: int          # optional: new-group notifications (0 = off)
+    updates_url: str = "https://t.me/+CnJ6ob7M-MdkOGFl"   # shown on menu / help buttons
 
 
 def load() -> Settings:
@@ -40,4 +41,5 @@ def load() -> Settings:
         catalog_size=int(os.getenv("CATALOG_SIZE", "600")), refresh_days=int(os.getenv("REFRESH_DAYS", "7")),
         anilist_url=os.getenv("ANILIST_URL", "https://graphql.anilist.co"),
         log_channel=int(os.getenv("LOG_CHANNEL", "0") or 0),
+        updates_url=os.getenv("UPDATES_URL", "https://t.me/+CnJ6ob7M-MdkOGFl"),
     )

@@ -60,3 +60,20 @@ def hint_pattern(title: str, level: int, rng: random.Random | None = None) -> st
                 chars.append("_")
         out.append(" ".join(chars))
     return "   ".join(out)
+
+
+_YEAR_TAG = re.compile(r"\s*[\(\[]\s*(?:19|20)\d{2}\s*[\)\]]")
+
+
+def clean_title(title: str) -> str:
+    """'Fruits Basket (2019)' -> 'Fruits Basket'. Season/cour words are kept ('... Season 2')."""
+    out = re.sub(r"\s{2,}", " ", _YEAR_TAG.sub("", title or "")).strip()
+    return out or (title or "")
+
+
+def is_close(guess: str, aliases: list[str]) -> bool:
+    """A typo-level near miss (used only for a 🤔 reaction, never for scoring)."""
+    g = norm(guess)
+    if len(g) < 4:
+        return False
+    return any(len(a) >= 5 and 0.72 <= ratio(g, a) < 1.0 for a in aliases)

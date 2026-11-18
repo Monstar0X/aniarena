@@ -13,7 +13,7 @@ _RAW = """
 1735|Naruto Shippuden|shippuden|2007|WIN|500|TV|84|Pierrot|Action,Adventure,Fantasy|Ninja,Shounen|The grown-up ninja returns from training to face a criminal organisation hunting powerful creatures.
 269|Bleach||2004|FAL|366|TV|79|Pierrot|Action,Adventure,Supernatural|Shinigami,Swordplay|A teenager who can see ghosts inherits the powers of a spirit reaper to protect the living.
 21|One Piece|op|1999|FAL|1100|TV|88|Toei Animation|Action,Adventure,Comedy,Fantasy|Pirates,Shounen|A rubber-limbed young man sails with a crew in search of the legendary treasure that will make him king of pirates.
-11061|Hunter x Hunter (2011)|hxh;hunter x hunter|2011|FAL|148|TV|90|Madhouse|Action,Adventure,Fantasy|Shounen,Super Power|A boy takes the licensing exam to become an elite adventurer in hopes of finding his missing father.
+11061|Hunter x Hunter|hxh;hunter x hunter 2011|2011|FAL|148|TV|90|Madhouse|Action,Adventure,Fantasy|Shounen,Super Power|A boy takes the licensing exam to become an elite adventurer in hopes of finding his missing father.
 1|Cowboy Bebop||1998|SPR|26|TV|86|Sunrise|Action,Adventure,Sci-Fi|Space,Bounty Hunter|A ragtag crew of bounty hunters chases criminals across the solar system while running from their pasts.
 30|Neon Genesis Evangelion|nge;eva|1995|FAL|26|TV|83|Gainax|Action,Drama,Mecha,Psychological,Sci-Fi|Mecha,Philosophy|Teenagers pilot giant bio-machines to fight mysterious beings attacking a futuristic city.
 1575|Code Geass: Lelouch of the Rebellion|code geass|2006|FAL|25|TV|86|Sunrise|Action,Drama,Mecha,Sci-Fi|Military,Strategy|An exiled prince gains a mind-control power and leads a rebellion against an empire.

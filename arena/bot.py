@@ -31,6 +31,19 @@ def name_of(u) -> str:
     return (u.first_name or u.username or str(u.id))[:24]
 
 
+async def react(message, emoji: str) -> None:
+    """Best-effort emoji reaction (needs reactions enabled in the chat; never breaks a game if it fails)."""
+    try:
+        await message.react(emoji=emoji)
+    except Exception:
+        pass
+
+
+def updates_row() -> list:
+    url = CTX["settings"].updates_url
+    return [Btn("📢 Updates channel", url=url)] if url else []
+
+
 def throttle(uid: int, gap: float = 0.7) -> bool:
     now = time.monotonic()
     if now - _LAST.get(uid, 0) < gap:
@@ -50,7 +63,8 @@ async def bot_link(client, payload: str = "") -> str:
 def menu_kb(username: str) -> Kb:
     return Kb([[Btn("🧩 Daily Puzzle", callback_data="m:daily"), Btn("📈 Higher/Lower", callback_data="m:hol")],
                [Btn("🏆 Leaderboard", callback_data="m:top"), Btn("👤 My Card", callback_data="m:me")],
-               [Btn("➕ Add to a group (Arena battles)", url=f"https://t.me/{username}?startgroup=arena")]])
+               [Btn("➕ Add to a group (Arena battles)", url=f"https://t.me/{username}?startgroup=arena")],
+               *([updates_row()] if updates_row() else [])])
 
 
 def extras(res: dict) -> str:
@@ -91,11 +105,23 @@ async def cmd_start(client, message):
     if payload == "daily":
         return await cmd_daily(client, message)
     bonus = f"\n\n🎁 Welcome bonus: +{progress.REF_INVITEE_XP} XP for joining via a friend!" if info["referrer"] else ""
-    await message.reply_text(HELP + bonus, parse_mode=HTML, reply_markup=menu_kb(me))
+    await message.reply_text(help_text() + bonus, parse_mode=HTML, disable_web_page_preview=True, reply_markup=menu_kb(me))
+
+
+def help_text() -> str:
+    url = CTX["settings"].updates_url
+    return HELP + (f"\n\n📢 News & updates: {url}" if url else "")
 
 
 async def cmd_help(client, message):
-    await message.reply_text(HELP, parse_mode=HTML)
+    await message.reply_text(help_text(), parse_mode=HTML, disable_web_page_preview=True,
+                             reply_markup=Kb([updates_row()]) if updates_row() else None)
+
+
+async def cmd_updates(client, message):
+    url = CTX["settings"].updates_url
+    await message.reply_text("📢 Join the updates channel for new features, events and tournaments!",
+                             reply_markup=Kb([updates_row()]) if url else None)
 
 
 async def cb_menu(client, query):
@@ -122,7 +148,8 @@ def share_kb(url: str, txt: str) -> Kb:
 async def daily_prompt(game: dict, daily) -> str:
     board = await daily.board(game)
     n = len(game["guesses"])
-    head = f"🧩 <b>AniArena Daily #{daily_number(daily.today())}</b>  ·  guess {n + 1}/{MAX_GUESSES}\n"
+    bar = "🟦" * n + "⬜" * (MAX_GUESSES - n)
+    head = f"🧩 <b>AniArena Daily #{daily_number(daily.today())}</b>  ·  guess {n + 1}/{MAX_GUESSES}\n{bar}\n"
     legend = "🟩 match  🟨 close  🟥 no  ⬆️⬇️ the answer is higher/lower"
     hint = daily.hint(n, daily.cat.get(game["target"]))
     return (head + (board + "\n\n" if board else "\nI picked a secret anime. Type a title to guess it!\n\n")
@@ -169,11 +196,12 @@ async def show_finished(client, message, uid: int, game: dict, res: dict | None 
             lines.append(ex)
     else:
         lines.append(f"🔥 Streak: {user.get('streak', 0)}   Come back tomorrow for a new one!")
+    lines.append(f"⏳ Next puzzle in <b>{d.until_next()}</b>")
     lines.append("\n<code>" + "\n".join(rows) + "</code>")
     await message.reply_text("\n".join(lines), parse_mode=HTML, reply_markup=share_kb(link, txt))
 
 
-async def do_guess(client, message, uid: int, name: str, mid: int):
+async def do_guess(client, message, uid: int, name: str, mid: int, src=None):
     d = CTX["daily"]
     res = await d.guess(uid, name, mid)
     if res["status"] == "done":
@@ -183,6 +211,9 @@ async def do_guess(client, message, uid: int, name: str, mid: int):
     if res["status"] != "ok":
         return await message.reply_text("I don't know that anime. Try another title.")
     game = await d.game(uid)
+    if src is not None:
+        close = sum(1 for c in res["cells"] if c.state != "🟥") >= 5
+        await react(src, "🎉" if res["won"] else "😢" if res["finished"] else "🔥" if close else "🤔")
     if res["finished"]:
         await message.reply_text(await d.board(game), parse_mode=HTML)
         return await show_finished(client, message, uid, game, res)
@@ -201,7 +232,7 @@ async def on_private_text(client, message):
                                         reply_markup=menu_kb(CTX.get("username", "")))
     hit = d.cat.exact(message.text)
     if hit:
-        return await do_guess(client, message, u.id, name_of(u), hit["_id"])
+        return await do_guess(client, message, u.id, name_of(u), hit["_id"], src=message)
     found = [x for x, s in d.cat.search(message.text, 6) if x["_id"] not in game["guesses"]][:5]
     if not found:
         return await message.reply_text("🤔 No anime found with that name. Try the English or romaji title.")
@@ -360,7 +391,9 @@ async def finish_battle(client, chat: int, stopped: bool = False):
     lines.append("\n/arena to go again · /top for the weekly chat ranking")
     me = (await client.get_me()).username
     await client.send_message(chat, "\n".join(lines), parse_mode=HTML,
-                              reply_markup=Kb([[Btn("➕ Add me to another group", url=f"https://t.me/{me}?startgroup=arena")]]))
+                              reply_markup=Kb([[Btn("🔁 Play again", callback_data="m:arena")],
+                                               [Btn("➕ Add me to another group", url=f"https://t.me/{me}?startgroup=arena")],
+                                               *([updates_row()] if updates_row() else [])]))
 
 
 async def on_group_text(client, message):
@@ -372,13 +405,18 @@ async def on_group_text(client, message):
     b: Battle = s["b"]
     res = b.answer(u.id, name_of(u), message.text)
     if not res:
+        if b.current and b.current.solved_by is None and CTX["catalog"].is_close(message.text, b.current.anime["_id"]):
+            await react(message, "🤔")      # "warm" - you're nearly there
         return
+    await react(message, "🔥" if res["seconds"] <= 8 else "🎉")
     db = CTX["db"]
     await progress.register_user(db, u.id, name_of(u))
     lvl = await progress.award_xp(db, u.id, name_of(u), res["points"], chat=chat)
     await progress.bump_stat(db, u.id, "arena_wins")
     badges = await progress.check_badges(db, u.id)
-    txt = (f"✅ <b>{esc(res['name'])}</b> got it in {res['seconds']}s! <b>{esc(res['anime']['title'])}</b>  +{res['points']} pts")
+    top = "  ".join(f"{medal(i)} {esc(n)} {p}" for i, (_, n, p, _) in enumerate(b.standings()[:3]))
+    txt = (f"✅ <b>{esc(res['name'])}</b> got it in {res['seconds']}s! <b>{esc(res['anime']['title'])}</b>  +{res['points']} pts\n"
+           f"📊 {top}")
     ex = extras({"level": lvl, "badges": badges})
     await message.reply_text(txt + (f"\n{ex}" if ex else ""), parse_mode=HTML)
 
@@ -476,7 +514,8 @@ async def on_new_members(client, message):
                                                        "$setOnInsert": {"added": time.time(), "battles": 0}}, upsert=True)
     await message.reply_text("👋 <b>AniArena is here!</b>\n\n⚔️ /arena - trivia battle (first to type the anime wins)\n🏆 /top - this week's chat ranking\n"
                              "🧩 /daily - the daily puzzle (in DM)\n\n<i>Tip: for the battle to read answers, make me an admin or turn off my privacy mode in BotFather.</i>",
-                             parse_mode=HTML, reply_markup=Kb([[Btn("⚔️ Start a battle", callback_data="m:arena")]]))
+                             parse_mode=HTML, reply_markup=Kb([[Btn("⚔️ Start a battle", callback_data="m:arena")],
+                                                       *([updates_row()] if updates_row() else [])]))
     log_ch = CTX["settings"].log_channel
     if log_ch:
         try:
@@ -582,7 +621,7 @@ async def reminder_loop(client, hour: int = 17):
 def setup(app, ctx: dict) -> None:
     CTX.update(ctx)
     for name, fn in {"start": cmd_start, "help": cmd_help, "daily": cmd_daily, "hol": cmd_hol, "arena": cmd_arena,
-                     "stop": cmd_stop, "top": cmd_top, "me": cmd_me, "invite": cmd_invite, "remind": cmd_remind,
+                     "stop": cmd_stop, "updates": cmd_updates, "top": cmd_top, "me": cmd_me, "invite": cmd_invite, "remind": cmd_remind,
                      "stats": cmd_stats, "broadcast": cmd_broadcast}.items():
         app.add_handler(MessageHandler(fn, filters.command(name)))
     app.add_handler(MessageHandler(on_new_members, filters.new_chat_members))

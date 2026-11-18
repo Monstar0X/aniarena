@@ -34,7 +34,10 @@ class Catalog:
         self.items = {d["_id"]: d for d in docs}
         self._names, self._index = {}, []
         for d in docs:
-            names = [text.norm(x) for x in [d["title"], *d.get("aliases", [])] if x]
+            raw = d["title"]
+            d["title"] = text.clean_title(raw)             # display name without "(2019)" style year tags
+            d["aliases"] = [text.clean_title(a) for a in d.get("aliases", [])]
+            names = [text.norm(x) for x in [d["title"], raw, *d["aliases"]] if x]
             self._names[d["_id"]] = list(dict.fromkeys(n for n in names if n))
             self._index += [(n, d["_id"]) for n in self._names[d["_id"]]]
         self._by_pop = [d["_id"] for d in sorted(docs, key=lambda d: (-d.get("popularity", 0), d["_id"]))]
@@ -106,6 +109,9 @@ class Catalog:
         q = text.norm(query)
         hits = [mid for a, mid in self._index if a == q]
         return self.items[hits[0]] if hits else None
+
+    def is_close(self, guess: str, mid: int) -> bool:
+        return text.is_close(guess, self._names.get(mid, []))
 
     def is_answer(self, guess: str, mid: int) -> bool:
         return text.strict_match(guess, self._names.get(mid, []))

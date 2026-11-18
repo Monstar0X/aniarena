@@ -8,6 +8,8 @@ import time
 import urllib.error
 import urllib.request
 
+from .text import clean_title
+
 QUERY = """query($p:Int,$n:Int){Page(page:$p,perPage:$n){pageInfo{hasNextPage}
 media(type:ANIME,sort:POPULARITY_DESC,isAdult:false,format_in:[TV,MOVIE,ONA]){
 id title{romaji english} synonyms seasonYear season episodes format averageScore popularity genres
@@ -26,8 +28,8 @@ def to_doc(m: dict) -> dict | None:
     if not (m.get("seasonYear") and m.get("averageScore") and m.get("episodes") and studios and m.get("season")):
         return None
     t = m["title"]
-    title = t.get("english") or t.get("romaji")
-    aliases = [x for x in {t.get("romaji"), t.get("english"), *(m.get("synonyms") or [])} if x and x != title]
+    title = clean_title(t.get("english") or t.get("romaji"))
+    aliases = [x for x in {clean_title(t.get("romaji")), clean_title(t.get("english")), *(m.get("synonyms") or [])} if x and x != title]
     return {
         "_id": m["id"], "title": title, "aliases": aliases[:8], "year": m["seasonYear"], "season": m["season"],
         "episodes": m["episodes"], "format": m["format"], "score": m["averageScore"],
