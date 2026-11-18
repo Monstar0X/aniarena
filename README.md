@@ -40,6 +40,15 @@ XP, levels and titles (Newbie -> Ascended), **streaks with freezes** (earn one e
 * **Group-add hook:** when the bot is added to a group it posts a one-tap "Start a battle" welcome.
 * **Streak reminders** at a configurable hour for players about to lose a streak (`/remind off` to opt out).
 
+### ✨ Polish
+* **Emoji reactions:** the bot reacts to the winning answer (🎉, or 🔥 if it was fast), to near-misses in Arena (🤔 "you're warm"),
+  and in the Daily to your guesses (🤔 / 🔥 when you're close / 🎉 on a win / 😢 on a loss). Reactions are best-effort: if a chat
+  has them disabled, the game carries on normally.
+* **Clean names:** year tags such as `Fruits Basket (2019)` are stripped from every title (fresh AniList data *and* anything already
+  stored in your database). Season/cour words like "Season 2" are kept. Old spellings still match when typed.
+* Daily shows a guess progress bar (🟦🟦⬜…) and a "next puzzle in 5h 12m" countdown; Arena shows a live top-3 after every round and
+  a **Play again** button; the updates channel button is on the menu, help, group welcome and battle results (`/updates`).
+
 ### 🛠 Owner tools
 `/stats` (users, groups, dailies today) and `/broadcast` (reply to any message; throttled, FloodWait-safe).
 Optional `LOG_CHANNEL` pings you whenever the bot joins a group.
@@ -61,6 +70,7 @@ Optional `LOG_CHANNEL` pings you whenever the bot joins a group.
    me - My player card
    invite - Invite friends, earn rewards
    remind - Streak reminders on/off
+   updates - News & updates channel
    help - How to play
    ```
 2. **Config:** copy `.env.example` to `.env` (`BOT_TOKEN`, `API_ID`, `API_HASH`, `MONGO_URI`, `OWNER_IDS`).
@@ -111,7 +121,7 @@ arena/memdb.py     in-memory MongoDB look-alike used by tests / quick local runs
 
 ## Tests
 ```bash
-python -m unittest discover -s tests -t .      # 36 tests, ~5 s, no network / Telegram / MongoDB needed
+python -m unittest discover -s tests -t .      # 45 tests, ~5 s, no network / Telegram / MongoDB needed
 ```
 Covers the Mongo-semantics layer, fuzzy matching, daily comparison and XP, streak freezes and breaks, referral rules
 (no self/ghost/repeat referrals), weekly boards, battle scoring and hint flow (including "synopsis never leaks the
